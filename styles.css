@@ -20,3 +20,8 @@ body {
     fill:rgb(150, 209, 243);
 }
 
+.checkboxes{
+    transform: translate(1200px,30px);
+    position:absolute;
+}
+
