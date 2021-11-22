@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CitiBike Stations</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://d3js.org/d3-path.v2.min.js"></script>
+    <script src="https://d3js.org/d3-shape.v2.min.js"></script>
+    <script src="https://d3js.org/topojson.v1.min.js"></script>
+    <script src="https://d3js.org/d3-array.v2.min.js"></script>
+    <script src="https://d3js.org/d3-geo.v2.min.js"></script>
+    <script src="https://d3js.org/d3-geo-projection.v3.min.js"></script>
+    <script src="https://unpkg.com/react/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone/babel.js"></script>
+    <link rel="stylesheet" href="styles.css" > 
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+    const mapURL = "council_map.geojson"
+    const csvURL = "Annual_Crime_Dataset.csv"
+
+    // Clearance Date: "28-Jan-15"
+    // Clearance Status: "N"
+    // Council District: "4.0"
+    // GO Census Tract: "18.13"
+    // GO District: "E"
+    // GO Highest Offense Desc: "AGG ROBBERY/DEADLY WEAPON     "
+    // GO Location: "9001 N IH 35 SVRD NB                                                                                "
+    // GO Location Zip: "78753.0"
+    // GO Primary Key: "201,510,782"
+    // GO Report Date: "1-Jan-15"
+    // GO X Coordinate: "3130483.0"
+    // GO Y Coordinate: "10102366.0"
+    // Highest NIBRS/UCR Offense Description: "Robbery"
+    // Latitude: "30.35386348088982"
+    // Longitude: "-97.68923639
+    
+    function useData(csvPath){
+        const [dataAll, setData] = React.useState(null);
+        React.useEffect(() => {
+            d3.csv(csvPath).then(data => {
+                data.forEach(d => {
+                    d['GO X Coordinate'] = +d['GO X Coordinate'];
+                    d['GO Y Coordinate'] = +d['GO Y Coordinate'];
+                    d['Council District'] = +d['Council District'];
+                });
+                setData(data);
+            });
+        }, []);
+        return dataAll;
+    }
+
+    function useMap(jsonPath) {
+        const [data, setData] = React.useState(null);
+        React.useEffect(() => {
+            d3.json(jsonPath).then(geoJsonData => {
+                setData(geoJsonData);
+            })
+        }, []);
+        return data;
+    }
+    function TheMap(props) {
+        const {x, y, map, data, height, width, selectedDistrict, setSelectedDistrict} = props;
+        const projection = d3.geoMercator().fitSize([width, height], map);
+        const path = d3.geoPath(projection);
+        const radius = d3.scaleLinear().range([2, 20])
+            .domain([d3.min(data, d => d.start), d3.max(data, d => d.start)]);
+
+        //use array to save event number in each district
+        let district_crime = new Array(11).fill(0);
+        data.map(d=>{
+            let ind = d["Council District"];
+            district_crime[ind]+=1;
+        })
+        //colorscale
+        const harm_color = d3
+          .scaleSequential()
+          .domain([d3.min(district_crime.slice(1,11)), d3.max(district_crime.slice(1,11))])
+          .interpolator(d3.interpolate("#ffcfcc", "#ad0a00"));
+        const getColor = (selectedDistrict, district) => {
+            return selectedDistrict&&district===selectedDistrict ? "steelblue" : harm_color(district_crime[district]);
+        }
+        return <g transform={`translate(${x}, ${y})`}>
+            {map.features.map((feature, idx) => {
+                return <path key={idx+"boundary"} className={"boundary"} d={path(feature)} fill={getColor(selectedDistrict, feature.properties["council_district"])} opacity={0.9} onMouseEnter={(event)=>{
+                    setSelectedDistrict(feature.properties["council_district"]);
+                }} onMouseOut={()=>{
+                    setSelectedDistrict(null);
+                }}/>
+            })}
+            {data.map(d=>{
+                const [x,y] = projection([d.Longitude, d.Latitude]);
+                return <circle key={d["GO Primary Key"]} cx={x} cy={y} r={1.5} opacity={0.7} fill={"black"} pointerEvents={'none'}/>
+            })}
+            </g>
+    }
+    
+    function Tooltip(props) {
+        const {d, stationYearData, left, top, height, width} = props;
+        // TODO: ADD symmetric bar chart/pie chart 
+        if (!d) {
+            return <g></g>;
+        } else {
+            return <g transform={`translate(${left}, ${top})`}>
+                    <text style={{ textAnchor:'start', fontSize:'15px'}}  transform={`translate(${0}, ${-5})rotate(0)`}>{d} </text>
+                </g>
+        };  
+    }
+
+    const CrimeData = () =>{
+        const [month, setMonth] = React.useState('0');
+        const [selectedDistrict, setSelectedDistrict] = React.useState(null);
+        const rawData = useData(csvURL);
+        const map = useMap(mapURL);
+        const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        if (!map || !rawData) {
+                return <pre>Loading...</pre>;
+            };
+        const WIDTH = 1200;
+        const HEIGHT = 800;
+        const margin = {top:20, right:40, bottom:160, left:40, gap:40};
+        const innerWidth = WIDTH - margin.left - margin.right - margin.gap;
+        const innerHeight = HEIGHT - margin.top - margin.bottom - margin.gap;
+        const dataAll = rawData.filter(d=>d["Council District"]!=0);
+        const data = dataAll.filter(d => {
+            return d["GO Report Date"].includes(MONTH[month]);
+        })
+        const changeHandler = (event) => {
+            setMonth(event.target.value);
+        }
+        const selectedDistrictData = data.filter(d=>d["Council District"]===selectedDistrict);
+        // console.log(data);
+        return <div>
+            <div>
+                <input key="slider" type='range' min='0' max='11' value={month} step='1' onChange={changeHandler}/>
+                <input key="monthText" type="text" value={MONTH[month]} readOnly/>
+            </div>
+            <svg width={WIDTH} height={HEIGHT}>
+                <g>
+                    <TheMap x={margin.left} y={margin.top} height={innerHeight+margin.gap} width={innerWidth/2} data={data} map={map} selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict}/>
+                </g>
+                <Tooltip d={selectedDistrict} left={innerWidth/2+margin.gap} top={margin.top+margin.gap+innerHeight/2} 
+                height={innerHeight/2} width={innerWidth/2}/>
+            </svg>
+            </div>
+    }
+    ReactDOM.render( <CrimeData />, document.getElementById('root'));
+    </script>
+    </body>
+    </html>
