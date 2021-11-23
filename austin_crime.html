@@ -113,7 +113,7 @@
         crimedata.map(d=>{
             let key = d["GO Report Date"];
             if(!(key in daytocrime)){
-                daytocrime[key]= 0;
+                daytocrime[key]= 1;
             }else{
                 daytocrime[key]+=1;
             }
@@ -128,7 +128,7 @@
         data.map(d=>{
             let key = d["GO Report Date"];
             if(!(key in daytocrimeAll)){
-                daytocrimeAll[key]= 0;
+                daytocrimeAll[key]= 1;
             }else{
                 daytocrimeAll[key]+=1;
             }
@@ -139,7 +139,7 @@
         }
         const values = dayvaluesAll.map(c => c.count);
         const maxValue = d3.max(values);
-        const minValue = d3.min(values);
+        const minValue = 0;
 
         const cellSize = 15;
         const yearHeight = cellSize * 7;
