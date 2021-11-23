@@ -108,7 +108,7 @@
         const crimedata = data.filter(d=>{
             return crimetypes.indexOf(d["Highest NIBRS/UCR Offense Description"]) != -1;
         })
-        console.log(crimetypes);
+        console.log('testing', crimetypes);
         let daytocrime = {};
         crimedata.map(d=>{
             let key = d["GO Report Date"];
@@ -165,6 +165,17 @@
                 })}
             </g>
 
+    }
+
+
+    function Barchart(props){
+        const {x, y, height, width, data, crimetypes, selectedDistrict, setSelectedDistrict} = props;
+
+        const xScale = d3.scaleBand()
+                    .range([0, width])
+                    .domain(data.map(d => {return d.}));
+        
+        return 
     }
 
     function Tooltip(props) {
@@ -293,6 +304,13 @@
 
                     <g id="heatmap"></g>
                     <HeatMap x={margin.left+innerWidth/2+margin.gap} y={margin.top+margin.gap} height={innerHeight/4} width={innerWidth/2} data={dataAll} crimetypes={crimetypes}/>
+                    
+                    <Barchart x={margin.left+innerWidth/2+margin.gap} y={margin.top+innerHeight/2+margin.gap} 
+                        height={innerHeight/4} width={innerWidth/4} 
+                        data={dataAll} crimetypes={crimetypes} 
+                        selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict} />
+                
+                
                 </g>
                 <Tooltip d={selectedDistrict} left={innerWidth/2+margin.gap} top={margin.top+margin.gap+innerHeight/2} 
                 height={innerHeight/2} width={innerWidth/2}/>
