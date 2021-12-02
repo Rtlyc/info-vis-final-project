@@ -15,7 +15,9 @@ body {
     fill: #9a9e9e;
     stroke: #C0C0BB;
 }
-
+div {
+    white-space: pre-wrap;
+}
 .sphere {
     fill:rgb(150, 209, 243);
 }

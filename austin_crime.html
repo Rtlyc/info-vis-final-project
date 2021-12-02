@@ -191,9 +191,13 @@
     function TreeMapText(props) {
         const { d } = props;
         return <foreignObject width={d.x1-d.x0} height={d.y1-d.y0}>
-            <div >
-                <p style={{fontSize:"10px"}} >{d.ancestors().reverse().slice(1).map((d, idx) => d.data.name)
-                    .join("\n\n")+"\n\nAverage Duration:"+(d.value)}</p>
+            <div style={{fontSize:"10px"}}>
+                
+                <p style={{fontSize:"10px"}}> 
+                    {d.ancestors().reverse().slice(1).map((d, idx) => d.data.name)
+                    .join("\n")+"\nAverage Duration:"+(d.avgD)} 
+                </p>
+                
             </div>
             </foreignObject>
     }
@@ -249,9 +253,10 @@
         let groups = d3.groups( data, d => d[attributes[0]]);
         let levels = groups.map( d => d[0]);
         for (let i = 0; i < levels.length; i++) {
-            let AvgDays = d3.mean(groups[i][1], d => d.Duration);
+            let avgD = d3.mean(groups[i][1], d => d.Duration);
+            let CrimeNum = groups[i][1].length;
             itemArr.push({name: levels[i], children: buildTree(groups[i][1], attributes.slice(1)),
-                 value: AvgDays, group: groups[i][1]});
+                 avgD: avgD, value: CrimeNum, group: groups[i][1]});
         } 
         return itemArr;
         
@@ -310,9 +315,11 @@
         //console.log(dataClear)
         let attributes = ["Highest NIBRS/UCR Offense Description", "DurationGroup"];
         //console.log(d3.mean(data, d => d.Duration))
+        //let AvgDays = d3.mean(dataClear, d => d.Duration);
         let root = {name: "Crimes", children: buildTree(dataClear, attributes),
             //value: data.filter( d => d.Survived == 1).length/data.length
-            value: d3.mean(dataClear, d => d.Duration)};
+            avgD: d3.mean(dataClear, d => d.Duration), 
+            value: data.length};
         root = d3.hierarchy(root)
             .sum(d => {
                 // console.log(d.children ? 0 : d.value);
