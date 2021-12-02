@@ -9,6 +9,7 @@
     <script src="https://d3js.org/d3-array.v2.min.js"></script>
     <script src="https://d3js.org/d3-geo.v2.min.js"></script>
     <script src="https://d3js.org/d3-geo-projection.v3.min.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v2.min.js"></script> 
     <script src="https://unpkg.com/react/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone/babel.js"></script>
@@ -108,7 +109,7 @@
         const crimedata = data.filter(d=>{
             return crimetypes.indexOf(d["Highest NIBRS/UCR Offense Description"]) != -1;
         })
-        console.log('testing', crimetypes);
+        //console.log('testing', crimetypes);
         let daytocrime = {};
         crimedata.map(d=>{
             let key = d["GO Report Date"];
@@ -167,25 +168,165 @@
 
     }
 
-
-    function Barchart(props){
-        const {x, y, height, width, data, crimetypes, selectedDistrict, setSelectedDistrict} = props;
-
-        const xScale = d3.scaleBand()
-                    .range([0, width])
-                    .domain(data.map(d => {return d.}));
+    function getTimeGroup( d ){
         
-        return 
+        if (d.Duration < 50) {
+            return "Duration: [0, 50]"
+        }
+        if (50 <= d.Duration && d.Duration < 100) {
+            return "Duration:[50, 100]"
+        }
+        if (100 <= d.Duration && d.Duration < 150) {
+            return "Duration:[100, 150]"
+        }
+        if (150 <= d.Duration && d.Duration < 200) {
+            return "Duration:[150, 200]"
+        }
+        if (200 <= d.Duration) {
+            return "Duration: Greater than 200"
+        }
+        
+    }
+
+    function TreeMapText(props) {
+        const { d } = props;
+        return <foreignObject width={d.x1-d.x0} height={d.y1-d.y0}>
+            <div >
+                <p style={{fontSize:"10px"}} >{d.ancestors().reverse().slice(1).map((d, idx) => d.data.name)
+                    .join("\n\n")+"\n\nAverage Duration:"+(d.value)}</p>
+            </div>
+            </foreignObject>
+    }
+
+    function TreeMap(props) {
+            const { width, height, root} = props;
+            
+
+            const tree = d3.treemap().tile(d3.treemapSquarify).size([width, height]).padding(2)
+                .round(true)(root).sort((a, b) => b.value - a.value);;
+
+
+            // const leaves = tree.leaves();
+            // console.log(leaves);
+
+            const parents = tree.leaves().map( d => d.parent.data.name);
+            const parentsCategories = parents.filter( (d, idx) => parents.indexOf(d) === idx );
+            const color = d3.scaleOrdinal(d3.schemeDark2).domain(parentsCategories);
+            const firstLayer = tree.descendants()[0].children;
+            //console.log('here', parentsCategories)
+            
+            return <svg width={width} height={height+50}>
+            <g>
+                {tree.leaves().map( (d, idx) => {
+                    return <g key={idx+"treemap"} transform={`translate(${d.x0}, ${d.y0})`} >
+                        <rect width={d.x1-d.x0} height={d.y1-d.y0} stroke={"none"} 
+                            fill={color(d.parent.data.name)} opacity={0.8}/>
+                        <TreeMapText d={d} />
+                    </g>
+                })}
+                {firstLayer.map( (d, idx) => {
+                    return <g key={idx+"outerline"} transform={`translate(${d.x0}, ${d.y0})`}>
+                        <rect width={d.x1-d.x0} height={d.y1-d.y0} stroke={"black"} fill={"none"}/>
+                        <text style={{fontSize:"1em"}} x={ (d.x1-d.x0)/2 } y={ (d.y1-d.y0)/2 } textAnchor={"middle"} opacity={0.4} 
+                        transform={`rotate(${(d.x1-d.x0)>(d.y1-d.y0)? 0: 90}, ${(d.x1-d.x0)/2}, ${(d.y1-d.y0)/2})`}>
+    
+                            </text>
+                        </g>
+                })}
+                <Legend x={0} y={height} colormap={color} crimetypes={parentsCategories} />
+                </g>
+            </svg>
+    }
+    
+    
+    function buildTree(data, attributes) {
+        //data: a list of objects, loaded from backend
+        //attributes: the attributes that define the hierarchy 
+        let itemArr = [];
+        if (attributes.length === 0){
+            return null;
+        }
+        let groups = d3.groups( data, d => d[attributes[0]]);
+        let levels = groups.map( d => d[0]);
+        for (let i = 0; i < levels.length; i++) {
+            let AvgDays = d3.mean(groups[i][1], d => d.Duration);
+            itemArr.push({name: levels[i], children: buildTree(groups[i][1], attributes.slice(1)),
+                 value: AvgDays, group: groups[i][1]});
+        } 
+        return itemArr;
+        
+    }
+
+    function Legend(props) {
+        //Here we wantrectangles filled by color
+        const {x, y, colormap, crimetypes} = props;
+        const w = 15;
+        const h = 15;
+        const w1 = 90;
+        //create some groups for the legend
+        return <g transform = {`translate(${x}, ${y})`}>
+            {crimetypes.map( (d, idx) => {
+                return <rect key={idx+"legend"} x={idx*w1} y={0} width={w} height={h} 
+                style={{fill:colormap(d)}} />
+            } )}
+            {crimetypes.map((d, idx) => {
+                return <text style={{fontSize:"12px"}} key={idx+"legendText"} x={idx*w1+15} y={15}>
+                    {d}
+                </text>
+            })}
+            <rect key={"unknow_rect"} x={0} y={h*crimetypes.length} width={w} height={h}
+            style={{fill: "#9a9e9e"}} />
+            <text key={"unknow_legendText"} x={12} y={crimetypes.length*h+15}>
+                    {"Unknow"}
+            </text>
+        </g>
     }
 
     function Tooltip(props) {
-        const {d, stationYearData, left, top, height, width} = props;
-        // TODO: ADD symmetric bar chart/pie chart 
-        if (!d) {
+        const {data, left, top, height, width, crimetypes, selectedDistrict, setSelectedDistrict} = props;
+        const Month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        const crimedata = data.filter(d=>{
+            return crimetypes.indexOf(d["Highest NIBRS/UCR Offense Description"]) != -1;
+        })
+
+        
+
+        const dataClear = crimedata.filter(d => {
+            return d["Clearance Date"].includes('-');
+        });
+
+        
+
+        dataClear.map(d => {
+            d['Duration'] = (new Date(d['Clearance Date'])-new Date(d['GO Report Date']))/86400000;
+        });
+
+        //console.log(d3.max(data, d => d.Duration))
+        //console.log(d3.min(data, d => d.Duration))
+        
+        dataClear.map(d => {d.DurationGroup = getTimeGroup(d)});
+        
+        //console.log(dataClear)
+        let attributes = ["Highest NIBRS/UCR Offense Description", "DurationGroup"];
+        //console.log(d3.mean(data, d => d.Duration))
+        let root = {name: "Crimes", children: buildTree(dataClear, attributes),
+            //value: data.filter( d => d.Survived == 1).length/data.length
+            value: d3.mean(dataClear, d => d.Duration)};
+        root = d3.hierarchy(root)
+            .sum(d => {
+                // console.log(d.children ? 0 : d.value);
+                return d.children ? 0 : d.value;
+            });
+
+        if (!selectedDistrict) { 
             return <g></g>;
         } else {
             return <g transform={`translate(${left}, ${top})`}>
-                    <text style={{ textAnchor:'start', fontSize:'15px'}}  transform={`translate(${0}, ${-5})rotate(0)`}>{d} </text>
+                    <text style={{ textAnchor:'start', fontSize:'15px'}}  transform={`translate(${0}, ${-5})rotate(0)`}> District {selectedDistrict} </text>
+                    
+                    <TreeMap width={width} height={height} root={root} />
+
                 </g>
         };  
     }
@@ -254,7 +395,9 @@
         const changeHandler = (event) => {
             setMonth(event.target.value);
         }
-        const selectedDistrictData = data.filter(d=>d["Council District"]===selectedDistrict);
+        const selectedDistrictData = data.filter(d=>{
+            return d["Council District"] == selectedDistrict
+        });
 
         return <div>
             <div>
@@ -305,15 +448,14 @@
                     <g id="heatmap"></g>
                     <HeatMap x={margin.left+innerWidth/2+margin.gap} y={margin.top+margin.gap} height={innerHeight/4} width={innerWidth/2} data={dataAll} crimetypes={crimetypes}/>
                     
-                    <Barchart x={margin.left+innerWidth/2+margin.gap} y={margin.top+innerHeight/2+margin.gap} 
-                        height={innerHeight/4} width={innerWidth/4} 
-                        data={dataAll} crimetypes={crimetypes} 
-                        selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict} />
-                
-                
                 </g>
-                <Tooltip d={selectedDistrict} left={innerWidth/2+margin.gap} top={margin.top+margin.gap+innerHeight/2} 
-                height={innerHeight/2} width={innerWidth/2}/>
+
+                <Tooltip data={selectedDistrictData} left={margin.left+innerWidth/2} 
+                top={innerHeight/2} 
+                crimetypes={crimetypes}
+                height={innerHeight/2} width={WIDTH/2}
+                selectedDistrict={selectedDistrict}  />
+
             </svg>
             </div>
     }
