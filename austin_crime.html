@@ -194,10 +194,12 @@
             <div style={{fontSize:"10px"}}>
                 
                 <p style={{fontSize:"10px"}}> 
-                    {d.ancestors().reverse().slice(1).map((d, idx) => d.data.name)
-                    .join("\n")+"\nAverage Duration:"+(d.avgD)} 
+                    {d.ancestors().reverse().slice(1).map((d, idx) =>  {
+                        //console.log(d.data.avgD);
+                        return d.data.name})
+                    .join("\n")+"\nAverage Duration:"+(d.data.avgD)} 
                 </p>
-                
+
             </div>
             </foreignObject>
     }
@@ -322,8 +324,10 @@
             value: data.length};
         root = d3.hierarchy(root)
             .sum(d => {
+                //console.log(d.avgD);
                 // console.log(d.children ? 0 : d.value);
-                return d.children ? 0 : d.value;
+                return d.children ? 0 : d.value
+
             });
 
         if (!selectedDistrict) { 
