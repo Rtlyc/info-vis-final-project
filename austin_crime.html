@@ -221,18 +221,31 @@
             const firstLayer = tree.descendants()[0].children;
             //console.log('here', parentsCategories)
             
+            console.log(tree.leaves());
+
+            const cover = (event,d) =>{
+                //handle tooltip
+                const text= d.ancestors().reverse().slice(1).map((d, idx) =>  {
+                        return d.data.name})
+                    .join("\n")+"\nAvg. Days:"+(Math.round(d.data.avgD))+"\nNO:"+d.data.value;
+                d3.select('#tool').attr('class', 'tooltip').style('left', event.pageX+'px').style('top', event.pageY-28+'px').style('opacity',1).html(text);
+            }
+
+            const uncover = () =>{
+                d3.select('.tooltip').style('opacity', 0);
+            }
+
             return <svg width={width} height={height+50}>
             <g>
                 {tree.leaves().map( (d, idx) => {
                     return <g key={idx+"treemap"} transform={`translate(${d.x0}, ${d.y0})`} >
                         <rect width={d.x1-d.x0} height={d.y1-d.y0} stroke={"none"} 
-                            fill={color(d.parent.data.name)} opacity={0.8}/>
-                        <TreeMapText d={d} />
+                            fill={color(d.parent.data.name)} opacity={0.8} onMouseDown={(event) => {cover(event, d)}} onMouseOut={uncover}/>
                     </g>
                 })}
                 {firstLayer.map( (d, idx) => {
                     return <g key={idx+"outerline"} transform={`translate(${d.x0}, ${d.y0})`}>
-                        <rect width={d.x1-d.x0} height={d.y1-d.y0} stroke={"black"} fill={"none"}/>
+                        <rect width={d.x1-d.x0} height={d.y1-d.y0} stroke={"black"} fill={"none"} pointerEvents={'none'}/>
                         <text style={{fontSize:"1em"}} x={ (d.x1-d.x0)/2 } y={ (d.y1-d.y0)/2 } textAnchor={"middle"} opacity={0.4} 
                         transform={`rotate(${(d.x1-d.x0)>(d.y1-d.y0)? 0: 90}, ${(d.x1-d.x0)/2}, ${(d.y1-d.y0)/2})`}>
     
@@ -288,6 +301,11 @@
             </text>
         </g>
     }
+
+    function HoverText(props) {
+            let ret = <div id="tool"></div>;
+            return ret;
+        }
 
     function Tooltip(props) {
         const {data, left, top, height, width, crimetypes, selectedDistrict, setSelectedDistrict} = props;
@@ -452,6 +470,7 @@
                     </label>
                 </div>
             </div>
+            <HoverText/>
             <svg width={WIDTH} height={HEIGHT} className={"svg"}>
                 <g>
                     <TheMap x={margin.left} y={margin.top} height={innerHeight+margin.gap} width={innerWidth/2} data={data} map={map} selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict}/>
