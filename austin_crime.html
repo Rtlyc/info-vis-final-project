@@ -84,10 +84,10 @@
         }
         return <g transform={`translate(${x}, ${y})`}>
             {map.features.map((feature, idx) => {
-                return <path key={idx+"boundary"} className={"boundary"} d={path(feature)} fill={getColor(selectedDistrict, feature.properties["council_district"])} opacity={0.9} onMouseEnter={(event)=>{
+                return <path key={idx+"boundary"} className={"boundary"} d={path(feature)} fill={getColor(selectedDistrict, feature.properties["council_district"])} opacity={0.9} onMouseDown={(event)=>{
                     setSelectedDistrict(feature.properties["council_district"]);
                 }} onMouseOut={()=>{
-                    setSelectedDistrict(null);
+                    // setSelectedDistrict(null);
                 }}/>
             })}
             {data.map(d=>{
