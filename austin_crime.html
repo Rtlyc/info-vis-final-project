@@ -228,7 +228,7 @@
                 const text= d.ancestors().reverse().slice(1).map((d, idx) =>  {
                         return d.data.name})
                     .join("\n")+"\nAvg. Days:"+(Math.round(d.data.avgD))+"\nNO:"+d.data.value;
-                d3.select('#tool').attr('class', 'tooltip').style('left', event.pageX+'px').style('top', event.pageY-28+'px').style('opacity',1).html(text);
+                d3.select('#tool').attr('class', 'tooltip').style('left', event.pageX+'px').style('top', event.pageY-28+'px').style('opacity',0.8).html(text);
             }
 
             const uncover = () =>{
